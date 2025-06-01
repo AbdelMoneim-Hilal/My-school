@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة إدارة مدرسية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f8fafc; /* Slightly lighter gray */
+        }
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+            z-index: 50; /* Ensure sidebar is above content when absolute */
+        }
+        .sidebar-open {
+            transform: translateX(0);
+        }
+        .sidebar-closed {
+            transform: translateX(100%); /* For RTL, this pushes it off-screen to the right */
+        }
+        @media (min-width: 768px) { /* md breakpoint */
+            .sidebar-closed {
+                transform: translateX(0); /* Keep it visible on larger screens */
+            }
+        }
+        .active-link {
+            background-color: #374151; /* Darker gray for active link */
+            color: white;
+        }
+        .main-content {
+            transition: margin-right 0.3s ease-in-out; /* For RTL, adjust margin-right */
+        }
+        .modal {
+            transition: opacity 0.25s ease;
+            z-index: 100; 
+        }
+        .modal-active {
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .modal-content {
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out; 
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+        }
+        .modal-active .modal-content {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        .dashboard-card {
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px -3px rgba(0, 0, 0, 0.1), 0 4px 8px -2px rgba(0, 0, 0, 0.06); 
+        }
+        .timetable th, .timetable td {
+            border: 1px solid #e5e7eb; 
+            padding: 0.75rem; 
+            text-align: center;
+        }
+        .timetable th {
+            background-color: #f3f4f6; 
+        }
+        .role-hidden {
+            display: none !important;
+        }
+        .action-icon {
+            cursor: pointer;
+            padding: 0.25rem; 
+        }
+        .grade-section-title {
+            background-color: #e5e7eb; 
+            padding: 0.75rem 1rem; 
+            border-radius: 0.375rem; 
+            margin-top: 1rem; 
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600; 
+            transition: background-color 0.2s ease;
+        }
+        .grade-section-title:hover {
+            background-color: #d1d5db; 
+        }
+        .grade-students-table {
+            display: none; 
+            margin-top: 0.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out, opacity 0.5s ease-in-out;
+            opacity: 0;
+        }
+        .grade-students-table.expanded {
+            display: block;
+            max-height: 1000px; 
+            opacity: 1;
+        }
+        .arrow-icon {
+            transition: transform 0.3s ease;
+        }
+        .arrow-icon.expanded {
+            transform: rotate(90deg);
+        }
+        .btn {
+            padding: 0.625rem 1.25rem; 
+            border-radius: 0.375rem; 
+            font-weight: 600; 
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        .btn:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .btn-primary {
+            background-color: #3b82f6; 
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb; 
+        }
+        .btn-secondary {
+            background-color: #6b7280; 
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #4b5563; 
+        }
+        .btn-success {
+            background-color: #10b981; 
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #059669; 
+        }
+        .btn-danger {
+            background-color: #ef4444; 
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626; 
+        }
+        .btn-warning {
+             background-color: #f59e0b; 
+             color: white;
+        }
+        .btn-warning:hover {
+             background-color: #d97706; 
+        }
+        .btn-light {
+            background-color: #f3f4f6; 
+            color: #1f2937; 
+            border: 1px solid #d1d5db; 
+        }
+        .btn-light:hover {
+            background-color: #e5e7eb; 
+        }
+
+        .message-banner {
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            margin-top: 0.5rem;
+            font-size: 0.875rem; 
+            border-width: 1px;
+        }
+        .message-success {
+            background-color: #dcfce7; 
+            color: #166534; 
+            border-color: #86efac; 
+        }
+        .message-error {
+            background-color: #fee2e2; 
+            color: #991b1b; 
+            border-color: #fca5a5; 
+        }
+        .message-info {
+            background-color: #e0f2fe; 
+            color: #075985; 
+            border-color: #7dd3fc; 
+        }
+
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen overflow-hidden"> <aside id="sidebar" class="bg-gray-800 text-white w-64 sm:w-72 md:w-64 space-y-6 py-7 px-2 absolute inset-y-0 right-0 transform md:relative md:translate-x-0 sidebar-closed md:sidebar-open">
+            <a href="#" class="text-white text-2xl font-semibold px-4 flex items-center space-x-2 space-x-reverse">
+                <i class="fas fa-school"></i>
+                <span>نظام مدرستي</span>
+            </a>
+            <nav id="sidebarNav">
+                <a href="#dashboard" data-target="dashboard" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white active-link nav-link" data-roles="principal,teacher,student">
+                    <i class="fas fa-tachometer-alt ml-2"></i> لوحة التحكم
+                </a>
+                <a href="#students" data-target="students" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white nav-link" data-roles="principal,teacher">
+                    <i class="fas fa-user-graduate ml-2"></i> الطلاب
+                </a>
+                <a href="#teachers" data-target="teachers" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white nav-link" data-roles="principal">
+                    <i class="fas fa-chalkboard-teacher ml-2"></i> المعلمون
+                </a>
+                <a href="#courses" data-target="courses" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white nav-link" data-roles="principal,teacher,student">
+                    <i class="fas fa-book ml-2"></i> المواد الدراسية
+                </a>
+                <a href="#timetable" data-target="timetable" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white nav-link" data-roles="principal,teacher,student">
+                    <i class="fas fa-calendar-alt ml-2"></i> الجدول الدراسي
+                </a>
+                <a href="#attendance" data-target="attendance" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white nav-link" data-roles="principal,teacher,student">
+                    <i class="fas fa-user-check ml-2"></i> الحضور والغياب
+                </a>
+                <a href="#grades" data-target="grades" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white nav-link" data-roles="principal,teacher,student">
+                    <i class="fas fa-clipboard-list ml-2"></i> الدرجات
+                </a>
+                <a href="#communication" data-target="communication" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white nav-link" data-roles="principal,teacher,student">
+                    <i class="fas fa-comments ml-2"></i> التواصل
+                </a>
+                <a href="#reports" data-target="reports" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white nav-link" data-roles="principal">
+                    <i class="fas fa-chart-bar ml-2"></i> التقارير
+                </a>
+                <a href="#settings" data-target="settings" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white nav-link" data-roles="principal">
+                    <i class="fas fa-cog ml-2"></i> الإعدادات
+                </a>
+            </nav>
+        </aside>
+
+        <div id="mainContent" class="flex-1 flex flex-col overflow-hidden">
+            <header class="bg-white shadow-md p-4 flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-0">
+                <div class="flex items-center w-full sm:w-auto">
+                    <button id="sidebarToggle" class="text-gray-500 focus:outline-none md:hidden">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <h1 id="pageTitle" class="text-lg sm:text-xl font-semibold text-gray-700 ml-2 sm:ml-4">لوحة التحكم</h1>
+                </div>
+                <div class="flex items-center flex-wrap justify-end gap-2 sm:gap-3 w-full sm:w-auto">
+                    <div class="relative"> 
+                        <select id="roleSwitcher" class="bg-gray-200 border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto p-2.5">
+                            <option value="principal">مدير المدرسة</option>
+                            <option value="teacher">معلم</option>
+                            <option value="student">طالب (مثال: S1001)</option>
+                        </select>
+                    </div>
+                    <button class="relative p-2 text-gray-600 hover:text-gray-700 focus:outline-none"> 
+                        <i class="fas fa-bell"></i>
+                        <span class="absolute top-0 right-0 h-2 w-2 mt-1 mr-1 bg-red-500 rounded-full"></span>
+                    </button>
+                    <div class="relative"> 
+                        <button id="userMenuButton" class="flex items-center focus:outline-none">
+                            <img src="https://placehold.co/40x40/E2E8F0/A0AEC0?text=م" alt="صورة المستخدم" class="h-8 w-8 rounded-full object-cover">
+                            <span id="usernameDisplay" class="ml-2 text-sm font-medium text-gray-700 hidden sm:inline">اسم المستخدم (مدير)</span> 
+                            <span id="usernameDisplayShort" class="ml-2 text-sm font-medium text-gray-700 sm:hidden">مدير</span>
+                            <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                        </button>
+                        <div id="userMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                            <a href="#profile" data-target="profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 user-menu-item" data-roles="principal,teacher,student">الملف الشخصي</a>
+                            <a href="#logout" data-target="logout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 user-menu-item" data-roles="principal,teacher,student">تسجيل الخروج</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 sm:p-6">
+                <div id="dashboard-content" class="page-content">
+                    <div id="dashboardPrincipalView">
+                        <h2 class="text-2xl font-semibold text-gray-800 mb-6">أهلاً بك في لوحة تحكم المدير</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div id="navigateToStudents" class="bg-white p-6 rounded-lg shadow-lg dashboard-card"><div class="flex items-center"><div class="p-3 rounded-full bg-blue-500 bg-opacity-75"><i class="fas fa-user-graduate text-white text-2xl"></i></div><div class="ml-4"><p id="totalStudentsCard" class="text-2xl font-semibold text-gray-700">0</p><p class="text-sm text-gray-500">إجمالي الطلاب</p></div></div></div>
+                            <div id="navigateToTeachers" class="bg-white p-6 rounded-lg shadow-lg dashboard-card"><div class="flex items-center"><div class="p-3 rounded-full bg-green-500 bg-opacity-75"><i class="fas fa-chalkboard-teacher text-white text-2xl"></i></div><div class="ml-4"><p id="totalTeachersCard" class="text-2xl font-semibold text-gray-700">0</p><p class="text-sm text-gray-500">إجمالي المعلمين</p></div></div></div>
+                            <div id="navigateToCourses" class="bg-white p-6 rounded-lg shadow-lg dashboard-card"><div class="flex items-center"><div class="p-3 rounded-full bg-yellow-500 bg-opacity-75"><i class="fas fa-book-open text-white text-2xl"></i></div><div class="ml-4"><p id="totalCoursesCard" class="text-2xl font-semibold text-gray-700">0</p><p class="text-sm text-gray-500">المواد الدراسية</p></div></div></div>
+                            <div class="bg-white p-6 rounded-lg shadow-lg"><div class="flex items-center"><div class="p-3 rounded-full bg-red-500 bg-opacity-75"><i class="fas fa-exclamation-triangle text-white text-2xl"></i></div><div class="ml-4"><p class="text-2xl font-semibold text-gray-700">12</p><p class="text-sm text-gray-500">تنبيهات جديدة</p></div></div></div>
+                        </div>
+                    </div>
+                    <div id="dashboardTeacherView" class="role-hidden"><h2 class="text-2xl font-semibold text-gray-800 mb-6">أهلاً بك في لوحة تحكم المعلم</h2><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"><div class="bg-white p-6 rounded-lg shadow-lg dashboard-card"><div class="flex items-center"><div class="p-3 rounded-full bg-blue-500 bg-opacity-75"><i class="fas fa-users text-white text-2xl"></i></div><div class="ml-4"><p class="text-2xl font-semibold text-gray-700">30</p><p class="text-sm text-gray-500">طلابك</p></div></div></div><div class="bg-white p-6 rounded-lg shadow-lg dashboard-card"><div class="flex items-center"><div class="p-3 rounded-full bg-yellow-500 bg-opacity-75"><i class="fas fa-book-reader text-white text-2xl"></i></div><div class="ml-4"><p class="text-2xl font-semibold text-gray-700">5</p><p class="text-sm text-gray-500">موادك الدراسية</p></div></div></div><div class="bg-white p-6 rounded-lg shadow-lg"><div class="flex items-center"><div class="p-3 rounded-full bg-purple-500 bg-opacity-75"><i class="fas fa-calendar-check text-white text-2xl"></i></div><div class="ml-4"><p class="text-2xl font-semibold text-gray-700">3</p><p class="text-sm text-gray-500">حصص اليوم</p></div></div></div></div></div>
+                    <div id="dashboardStudentView" class="role-hidden"><h2 class="text-2xl font-semibold text-gray-800 mb-6">أهلاً بك <span id="studentNameDashboard"></span> في لوحة التحكم</h2><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"><div class="bg-white p-6 rounded-lg shadow-lg dashboard-card"><div class="flex items-center"><div class="p-3 rounded-full bg-yellow-500 bg-opacity-75"><i class="fas fa-book-reader text-white text-2xl"></i></div><div class="ml-4"><p class="text-2xl font-semibold text-gray-700">6</p><p class="text-sm text-gray-500">موادك المسجلة</p></div></div></div><div class="bg-white p-6 rounded-lg shadow-lg dashboard-card"><div class="flex items-center"><div class="p-3 rounded-full bg-teal-500 bg-opacity-75"><i class="fas fa-tasks text-white text-2xl"></i></div><div class="ml-4"><p class="text-2xl font-semibold text-gray-700">2</p><p class="text-sm text-gray-500">واجبات قادمة</p></div></div></div><div class="bg-white p-6 rounded-lg shadow-lg"><div class="flex items-center"><div class="p-3 rounded-full bg-red-500 bg-opacity-75"><i class="fas fa-bullhorn text-white text-2xl"></i></div><div class="ml-4"><p class="text-2xl font-semibold text-gray-700">1</p><p class="text-sm text-gray-500">إعلان جديد</p></div></div></div></div></div>
+                </div>
+
+                <div id="students-content" class="hidden page-content">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">إدارة الطلاب</h2>
+                    <button id="addStudentBtn" class="mb-4 btn btn-primary action-button" data-roles="principal">
+                        <i class="fas fa-plus ml-2"></i> إضافة طالب جديد
+                    </button>
+                    <div id="studentsGroupedByClass" class="space-y-2">
+                        </div>
+                </div>
+
+                <div id="teachers-content" class="hidden page-content">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">إدارة المعلمين</h2>
+                    <button id="addTeacherBtn" class="mb-4 btn btn-primary action-button" data-roles="principal"><i class="fas fa-plus ml-2"></i> إضافة معلم جديد</button>
+                    <div class="bg-white shadow-md rounded-lg overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الاسم</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الرقم الوظيفي</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المادة الأساسية</th><th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider action-column" data-roles="principal">إجراءات</th></tr></thead>
+                            <tbody id="teachersTableBody" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="courses-content" class="hidden page-content">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">إدارة المواد الدراسية</h2>
+                     <div class="mb-4">
+                        <label for="courseGradeFilter" class="block text-sm font-medium text-gray-700 mb-1">تصفية حسب الصف:</label>
+                        <select id="courseGradeFilter" class="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full md:w-1/3 p-2.5">
+                            <option value="all">جميع الصفوف</option>
+                            </select>
+                    </div>
+                    <button id="addCourseBtn" class="mb-4 btn btn-primary action-button" data-roles="principal"><i class="fas fa-plus ml-2"></i> إضافة مادة جديدة</button>
+                    <div class="bg-white shadow-md rounded-lg overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">اسم المادة</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">رمز المادة</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المعلم</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الصف</th><th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider action-column" data-roles="principal">إجراءات</th></tr></thead>
+                            <tbody id="coursesTableBody" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="timetable-content" class="hidden page-content">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">الجدول الدراسي</h2>
+                    <div class="mb-4">
+                        <label for="timetableGradeSelector" class="block text-sm font-medium text-gray-700 mb-1">اختر الصف لعرض الجدول:</label>
+                        <select id="timetableGradeSelector" class="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full md:w-1/3 p-2.5">
+                            </select>
+                    </div>
+                    <div id="timetableDisplay" class="bg-white shadow-md rounded-lg overflow-x-auto p-4">
+                        <p class="text-gray-500">يرجى اختيار صف لعرض جدوله.</p>
+                    </div>
+                     <div id="teacherTimetableView" class="timetable-view mt-8 role-hidden" data-roles="teacher">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-4">جدولك الدراسي (معلم)</h3>
+                        <table class="min-w-full timetable"><thead><tr><th>الوقت/اليوم</th><th>الأحد</th><th>الاثنين</th><th>الثلاثاء</th><th>الأربعاء</th><th>الخميس</th></tr></thead><tbody><tr><td>08:00-08:45</td><td>رياضيات (سادس)</td><td>لغة عربية (أول)</td><td>علوم (سادس)</td><td>لغة انجليزية (سادس)</td><td>رياضيات (أول)</td></tr><tr><td>08:45-09:30</td><td>لغة عربية (سادس)</td><td>رياضيات (أول)</td><td>لغة انجليزية (أول)</td><td>رياضيات (سادس)</td><td>لغة عربية (أول)</td></tr></tbody></table>
+                    </div>
+                </div>
+                
+                <div id="attendance-content" class="hidden page-content">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">الحضور والغياب</h2>
+                    <div id="takeAttendanceView" data-roles="principal,teacher">
+                        <div class="bg-white shadow-md rounded-lg p-6 space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label for="attendanceDate" class="block text-sm font-medium text-gray-700">التاريخ:</label>
+                                    <input type="date" id="attendanceDate" name="attendanceDate" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" value="">
+                                </div>
+                                <div>
+                                    <label for="attendanceGrade" class="block text-sm font-medium text-gray-700">الصف:</label>
+                                    <select id="attendanceGrade" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></select>
+                                </div>
+                                <div>
+                                    <label for="attendanceCourse" class="block text-sm font-medium text-gray-700">المادة/الحصة:</label>
+                                    <select id="attendanceCourse" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></select>
+                                </div>
+                            </div>
+                            <button id="loadAttendanceSheetBtn" class="btn btn-primary">عرض/تعديل قائمة الحضور</button>
+                            <div id="attendanceSheet" class="mt-4 hidden">
+                                <h3 class="text-lg font-semibold mb-2">قائمة الحضور:</h3>
+                                <div id="attendanceStudentList" class="space-y-2"></div>
+                                <button id="saveAttendanceBtn" class="mt-4 btn btn-success">حفظ الحضور</button>
+                            </div>
+                            <div id="attendanceMessage" class="message-banner hidden"></div>
+                        </div>
+                    </div>
+                    <div id="studentAttendanceView" class="mt-6 bg-white shadow-md rounded-lg p-6 role-hidden" data-roles="student">
+                        <h3 class="text-xl font-semibold mb-4">سجل حضوري</h3>
+                        <div class="mb-4">
+                             <label for="studentAttendanceDateView" class="block text-sm font-medium text-gray-700">عرض الحضور لتاريخ:</label>
+                             <input type="date" id="studentAttendanceDateView" class="mt-1 block w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div id="studentAttendanceDisplay" class="space-y-2">
+                            <p class="text-gray-500">اختر تاريخًا لعرض سجل حضورك.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="grades-content" class="hidden page-content">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">الدرجات</h2>
+                    <div id="addGradeSection" class="bg-white shadow-md rounded-lg p-6 mb-6 action-button" data-roles="principal,teacher">
+                        <h3 class="text-xl font-semibold mb-4">إدخال/تعديل درجة</h3>
+                        <input type="hidden" id="gradeEditRecordId"> <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label for="gradeStudent" class="block text-sm font-medium text-gray-700">الطالب:</label>
+                                <select id="gradeStudent" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></select>
+                            </div>
+                            <div>
+                                <label for="gradeCourse" class="block text-sm font-medium text-gray-700">المادة:</label>
+                                <select id="gradeCourse" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></select>
+                            </div>
+                            <div>
+                                <label for="gradeAssignment" class="block text-sm font-medium text-gray-700">الواجب/الاختبار:</label>
+                                <input type="text" id="gradeAssignment" placeholder="مثال: اختبار منتصف الفصل" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            </div>
+                            <div>
+                                <label for="gradeValue" class="block text-sm font-medium text-gray-700">الدرجة:</label>
+                                <input type="number" id="gradeValue" placeholder="مثال: 85" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            </div>
+                        </div>
+                        <button id="saveGradeBtn" class="mt-4 btn btn-success">حفظ الدرجة</button>
+                        <button id="clearGradeFormBtn" class="mt-4 ml-2 btn btn-light">مسح النموذج</button>
+                        <div id="gradeMessage" class="message-banner hidden"></div>
+                    </div>
+                    <div class="bg-white shadow-md rounded-lg p-6">
+                        <h3 class="text-xl font-semibold mb-4">عرض الدرجات المسجلة</h3>
+                        <div id="gradesDisplayArea" class="space-y-4">
+                             <p class="text-gray-500">سيتم عرض الدرجات هنا.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="communication-content" class="hidden page-content"> <h2 class="text-2xl font-semibold text-gray-800 mb-6">التواصل</h2> <p>محتوى التواصل.</p> </div>
+                <div id="reports-content" class="hidden page-content"> <h2 class="text-2xl font-semibold text-gray-800 mb-6">التقارير</h2> <p>محتوى التقارير.</p> </div>
+                <div id="settings-content" class="hidden page-content"> <h2 class="text-2xl font-semibold text-gray-800 mb-6">الإعدادات</h2> <p>محتوى الإعدادات.</p> </div>
+                <div id="profile-content" class="hidden page-content"> <h2 class="text-2xl font-semibold text-gray-800 mb-6">الملف الشخصي</h2> <p>محتوى الملف الشخصي.</p> </div>
+                <div id="logout-content" class="hidden page-content"> <h2 class="text-2xl font-semibold text-gray-800 mb-6">تسجيل الخروج</h2> <p>هل أنت متأكد أنك تريد تسجيل الخروج؟</p> <button class="mt-4 btn btn-danger"> تأكيد تسجيل الخروج </button> </div>
+                <div id="accessDenied-content" class="hidden page-content"> <h2 class="text-2xl font-semibold text-red-600 mb-6">وصول مرفوض</h2> <p>ليس لديك الصلاحية لعرض هذه الصفحة.</p> </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="studentFormModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center pb-3"><p id="studentModalTitle" class="text-2xl font-bold">إضافة طالب جديد</p><button id="closeStudentFormModal" class="modal-close cursor-pointer z-50"><i class="fas fa-times text-gray-700 text-xl"></i></button></div>
+            <form id="studentForm">
+                <input type="hidden" id="studentEditId">
+                <div class="mb-4"><label for="studentNameModal" class="block text-sm font-medium text-gray-700 mb-1">اسم الطالب</label><input type="text" id="studentNameModal" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required></div>
+                <div class="mb-4"><label for="studentIdModal" class="block text-sm font-medium text-gray-700 mb-1">الرقم الأكاديمي</label><input type="text" id="studentIdModal" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required></div>
+                <div class="mb-4"><label for="studentClassModal" class="block text-sm font-medium text-gray-700 mb-1">الصف</label><select id="studentClassModal" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required></select></div>
+                <div class="mb-4"><label for="studentStatusModal" class="block text-sm font-medium text-gray-700 mb-1">الحالة</label><select id="studentStatusModal" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required><option value="نشط">نشط</option><option value="غير نشط">غير نشط</option></select></div>
+                <div class="pt-4 flex justify-end space-x-2 space-x-reverse"><button type="button" id="cancelStudentForm" class="btn btn-light modal-close">إلغاء</button><button type="submit" id="submitStudentForm" class="btn btn-primary">إضافة طالب</button></div>
+            </form>
+        </div>
+    </div>
+    <div id="viewStudentModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center pb-3"><p class="text-2xl font-bold">تفاصيل الطالب</p><button id="closeViewStudentModal" class="modal-close cursor-pointer z-50"><i class="fas fa-times text-gray-700 text-xl"></i></button></div>
+            <div id="viewStudentDetails"></div>
+            <div class="pt-4 flex justify-end"><button type="button" id="okViewStudentModal" class="btn btn-primary modal-close">موافق</button></div>
+        </div>
+    </div>
+    <div id="confirmDeleteModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+            <div class="text-center"><i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i><p id="confirmDeleteMessage" class="text-lg font-semibold mb-4">هل أنت متأكد أنك تريد الحذف؟</p></div>
+            <div class="pt-4 flex justify-center space-x-3 space-x-reverse"><button type="button" id="cancelDelete" class="btn btn-light">إلغاء</button><button type="button" id="confirmDeleteButton" class="btn btn-danger">تأكيد الحذف</button></div>
+        </div>
+    </div>
+    <div id="teacherFormModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center pb-3"><p id="teacherModalTitle" class="text-2xl font-bold">إضافة معلم جديد</p><button id="closeTeacherFormModal" class="modal-close cursor-pointer z-50"><i class="fas fa-times text-gray-700 text-xl"></i></button></div>
+            <form id="teacherForm">
+                <input type="hidden" id="teacherEditId">
+                <div class="mb-4"><label for="teacherNameModal" class="block text-sm font-medium text-gray-700 mb-1">اسم المعلم</label><input type="text" id="teacherNameModal" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required></div>
+                <div class="mb-4"><label for="teacherIdModal" class="block text-sm font-medium text-gray-700 mb-1">الرقم الوظيفي</label><input type="text" id="teacherIdModal" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required></div>
+                <div class="mb-4"><label for="teacherSubjectModal" class="block text-sm font-medium text-gray-700 mb-1">المادة الأساسية</label><input type="text" id="teacherSubjectModal" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required></div>
+                <div class="pt-4 flex justify-end space-x-2 space-x-reverse"><button type="button" id="cancelTeacherForm" class="btn btn-light modal-close">إلغاء</button><button type="submit" id="submitTeacherForm" class="btn btn-primary">إضافة معلم</button></div>
+            </form>
+        </div>
+    </div>
+     <div id="viewTeacherModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center pb-3"><p class="text-2xl font-bold">تفاصيل المعلم</p><button id="closeViewTeacherModal" class="modal-close cursor-pointer z-50"><i class="fas fa-times text-gray-700 text-xl"></i></button></div>
+            <div id="viewTeacherDetails"></div>
+            <div class="pt-4 flex justify-end"><button type="button" id="okViewTeacherModal" class="btn btn-primary modal-close">موافق</button></div>
+        </div>
+    </div>
+    <div id="courseFormModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center pb-3"><p id="courseModalTitle" class="text-2xl font-bold">إضافة مادة</p><button id="closeCourseFormModal" class="modal-close cursor-pointer z-50"><i class="fas fa-times text-gray-700 text-xl"></i></button></div>
+            <form id="courseForm">
+                <input type="hidden" id="courseEditId">
+                <div class="mb-4"><label for="courseNameModal" class="block text-sm font-medium text-gray-700 mb-1">اسم المادة</label><input type="text" id="courseNameModal" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required></div>
+                <div class="mb-4"><label for="courseCodeModal" class="block text-sm font-medium text-gray-700 mb-1">رمز المادة</label><input type="text" id="courseCodeModal" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required></div>
+                <div class="mb-4"><label for="courseTeacherModalSelect" class="block text-sm font-medium text-gray-700 mb-1">معلم المادة</label><select id="courseTeacherModalSelect" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required></select></div>
+                <div class="mb-4"><label for="courseGradeModalSelect" class="block text-sm font-medium text-gray-700 mb-1">الصف</label><select id="courseGradeModalSelect" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required></select></div>
+                <div class="pt-4 flex justify-end space-x-2 space-x-reverse"><button type="button" id="cancelCourseForm" class="btn btn-light modal-close">إلغاء</button><button type="submit" id="submitCourseForm" class="btn btn-primary">إضافة مادة</button></div>
+            </form>
+        </div>
+    </div>
+    <div id="viewCourseModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center pb-3"><p class="text-2xl font-bold">تفاصيل المادة</p><button id="closeViewCourseModal" class="modal-close cursor-pointer z-50"><i class="fas fa-times text-gray-700 text-xl"></i></button></div>
+            <div id="viewCourseDetails"></div>
+            <div class="pt-4 flex justify-end"><button type="button" id="okViewCourseModal" class="btn btn-primary modal-close">موافق</button></div>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebarNav = document.getElementById('sidebarNav');
+        const allNavLinks = sidebarNav.querySelectorAll('.nav-link');
+        const pageContents = document.querySelectorAll('.page-content');
+        const pageTitle = document.getElementById('pageTitle');
+        const userMenuButton = document.getElementById('userMenuButton');
+        const userMenu = document.getElementById('userMenu');
+        const userMenuItems = userMenu.querySelectorAll('.user-menu-item');
+        const roleSwitcher = document.getElementById('roleSwitcher');
+        const usernameDisplay = document.getElementById('usernameDisplay');
+        const usernameDisplayShort = document.getElementById('usernameDisplayShort'); // For mobile username
+        
+        const totalStudentsCard = document.getElementById('totalStudentsCard');
+        const totalTeachersCard = document.getElementById('totalTeachersCard');
+        const totalCoursesCard = document.getElementById('totalCoursesCard');
+        const studentNameDashboard = document.getElementById('studentNameDashboard');
+
+        const dashboardPrincipalView = document.getElementById('dashboardPrincipalView');
+        const dashboardTeacherView = document.getElementById('dashboardTeacherView');
+        const dashboardStudentView = document.getElementById('dashboardStudentView');
+        const teacherTimetableView = document.getElementById('teacherTimetableView');
+        const studentsGroupedByClassDiv = document.getElementById('studentsGroupedByClass');
+
+
+        // Student Modals & Form
+        const studentFormModal = document.getElementById('studentFormModal');
+        const studentModalTitle = document.getElementById('studentModalTitle');
+        const closeStudentFormModal = document.getElementById('closeStudentFormModal');
+        const studentForm = document.getElementById('studentForm');
+        const studentEditIdInput = document.getElementById('studentEditId'); 
+        const studentNameModalInput = document.getElementById('studentNameModal');
+        const studentIdModalInput = document.getElementById('studentIdModal');
+        const studentClassModalSelect = document.getElementById('studentClassModal');
+        const studentStatusModalSelect = document.getElementById('studentStatusModal');
+        const cancelStudentForm = document.getElementById('cancelStudentForm');
+        const submitStudentFormButton = document.getElementById('submitStudentForm');
+        const addStudentBtn = document.getElementById('addStudentBtn');
+
+        const viewStudentModal = document.getElementById('viewStudentModal');
+        const closeViewStudentModal = document.getElementById('closeViewStudentModal');
+        const viewStudentDetailsDiv = document.getElementById('viewStudentDetails');
+        const okViewStudentModal = document.getElementById('okViewStudentModal');
+
+        // Teacher Modals & Form
+        const teacherFormModal = document.getElementById('teacherFormModal');
+        const teacherModalTitle = document.getElementById('teacherModalTitle');
+        const closeTeacherFormModal = document.getElementById('closeTeacherFormModal');
+        const teacherForm = document.getElementById('teacherForm');
+        const teacherEditIdInput = document.getElementById('teacherEditId'); 
+        const teacherNameModalInput = document.getElementById('teacherNameModal');
+        const teacherIdModalInput = document.getElementById('teacherIdModal');
+        const teacherSubjectModalInput = document.getElementById('teacherSubjectModal');
+        const cancelTeacherForm = document.getElementById('cancelTeacherForm');
+        const submitTeacherFormButton = document.getElementById('submitTeacherForm');
+        const addTeacherBtn = document.getElementById('addTeacherBtn');
+
+        const viewTeacherModal = document.getElementById('viewTeacherModal');
+        const closeViewTeacherModal = document.getElementById('closeViewTeacherModal');
+        const viewTeacherDetailsDiv = document.getElementById('viewTeacherDetails');
+        const okViewTeacherModal = document.getElementById('okViewTeacherModal');
+        
+        // Course Modals & Form
+        const courseFormModal = document.getElementById('courseFormModal');
+        const courseModalTitle = document.getElementById('courseModalTitle');
+        const closeCourseFormModal = document.getElementById('closeCourseFormModal');
+        const courseForm = document.getElementById('courseForm');
+        const courseEditIdInput = document.getElementById('courseEditId'); 
+        const courseNameModalInput = document.getElementById('courseNameModal');
+        const courseCodeModalInput = document.getElementById('courseCodeModal');
+        const courseTeacherModalSelect = document.getElementById('courseTeacherModalSelect');
+        const courseGradeModalSelect = document.getElementById('courseGradeModalSelect'); 
+        const courseGradeFilterSelect = document.getElementById('courseGradeFilter');
+        const cancelCourseForm = document.getElementById('cancelCourseForm');
+        const submitCourseFormButton = document.getElementById('submitCourseForm');
+        const addCourseBtn = document.getElementById('addCourseBtn');
+
+        const viewCourseModal = document.getElementById('viewCourseModal');
+        const closeViewCourseModal = document.getElementById('closeViewCourseModal');
+        const viewCourseDetailsDiv = document.getElementById('viewCourseDetails');
+        const okViewCourseModal = document.getElementById('okViewCourseModal');
+
+        // Timetable
+        const timetableGradeSelector = document.getElementById('timetableGradeSelector');
+        const timetableDisplayDiv = document.getElementById('timetableDisplay');
+
+        // Attendance
+        const attendanceDateInput = document.getElementById('attendanceDate');
+        const attendanceGradeSelect = document.getElementById('attendanceGrade');
+        const attendanceCourseSelect = document.getElementById('attendanceCourse');
+        const loadAttendanceSheetBtn = document.getElementById('loadAttendanceSheetBtn');
+        const attendanceSheetDiv = document.getElementById('attendanceSheet');
+        const attendanceStudentListDiv = document.getElementById('attendanceStudentList');
+        const saveAttendanceBtn = document.getElementById('saveAttendanceBtn');
+        const attendanceMessage = document.getElementById('attendanceMessage');
+        const studentAttendanceDateViewInput = document.getElementById('studentAttendanceDateView');
+        const studentAttendanceDisplayDiv = document.getElementById('studentAttendanceDisplay');
+
+
+        // Grades
+        const addGradeSection = document.getElementById('addGradeSection');
+        const gradeStudentSelect = document.getElementById('gradeStudent');
+        const gradeCourseSelect = document.getElementById('gradeCourse');
+        const gradeAssignmentInput = document.getElementById('gradeAssignment');
+        const gradeValueInput = document.getElementById('gradeValue');
+        const saveGradeBtn = document.getElementById('saveGradeBtn');
+        const clearGradeFormBtn = document.getElementById('clearGradeFormBtn');
+        const gradeMessage = document.getElementById('gradeMessage');
+        const gradesDisplayArea = document.getElementById('gradesDisplayArea');
+        const gradeEditRecordIdInput = document.getElementById('gradeEditRecordId');
+
+
+        // Confirm Delete Modal
+        const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+        const confirmDeleteMessage = document.getElementById('confirmDeleteMessage');
+        const cancelDelete = document.getElementById('cancelDelete');
+        const confirmDeleteButton = document.getElementById('confirmDeleteButton');
+        let itemToDelete = { type: null, id: null };
+
+
+        // --- Sample Data & State ---
+        const sampleStudentNames = ["أحمد عبدالله", "فاطمة محمد", "علي حسن", "نورة خالد", "يوسف سعد", "سارة فهد", "عبدالرحمن وليد", "مريم جمال", "عمر طارق", "ريم إبراهيم", "خالد نايف", "جود ياسر", "محمد صالح", "لمى فيصل", "سعود تركي", "هيا عبدالله", "ناصر أحمد", "شهد منصور", "عبدالعزيز بدر", "أمل حسين", "بدر سلمان", "غادة راشد", "فهد مصطفى", "ديمة ماجد", "طلال سامي", "رغد عادل", "سلمان عمر", "جنى علي", "راشد حمد", "نوف محمد", "فيصل عبدالله", "ليان خالد", "تركي يوسف", "سديم فهد", "منصور عبدالرحمن", "أروى وليد", "عادل جمال", "حصة طارق", "نايف إبراهيم", "مها ياسر", "ياسر خالد", "لجين صالح", "سامي فيصل", "ريما تركي", "وليد سعود", "دانة عبدالله", "جمال ناصر", "أثير أحمد", "طارق عبدالعزيز", "سلاف بدر", "إبراهيم فهد", "وتين مصطفى", "مصطفى طلال", "حنين سامي", "سعد سلمان", "أفنان عمر", "حسن راشد", "يارا حمد"];
+        const sampleTeacherNames = ["الأستاذ خالد العامر", "الأستاذة منيرة السيد", "الأستاذ عبدالله القرني", "الأستاذة سارة الغامدي", "الأستاذ محمد الشهري", "الأستاذة نورة العتيبي", "الأستاذ علي القحطاني", "الأستاذة فاطمة الزهراني", "الأستاذ أحمد المالكي", "الأستاذة هدى الحربي"];
+        const schoolGrades = ["الأول الابتدائي", "الثاني الابتدائي", "الثالث الابتدائي", "الرابع الابتدائي", "الخامس الابتدائي", "السادس الابتدائي"];
+        const teacherSubjects = ["اللغة العربية", "الرياضيات", "العلوم", "اللغة الإنجليزية", "الدراسات الإسلامية", "الحاسب الآلي", "التربية الفنية", "التربية البدنية", "الدراسات الاجتماعية", "الفيزياء"];
+        
+        let studentsData = [];
+        let teachersData = [];
+        let coursesData = []; 
+        let attendanceData = []; 
+        let gradesData = []; 
+
+        let currentRole = 'principal'; 
+        let nextStudentIdNum = 1001; 
+        let nextTeacherIdNum = 201;
+        let nextCourseCodeNum = 101; 
+        let nextAttendanceRecordId = 1;
+        let nextGradeRecordId = 1;
+
+        let currentViewingStudentId = "S1001"; 
+
+
+        const sampleTimetables = {}; 
+
+        // --- Populate Selects ---
+        function populateGradeSelects() {
+            const selectsToPopulate = [
+                studentClassModalSelect, timetableGradeSelector, attendanceGradeSelect,
+                courseGradeModalSelect, courseGradeFilterSelect
+            ];
+            selectsToPopulate.forEach(select => {
+                if (select) {
+                    select.innerHTML = ''; 
+                    if(select === courseGradeFilterSelect) { 
+                         const allOpt = document.createElement('option');
+                         allOpt.value = "all";
+                         allOpt.textContent = "جميع الصفوف";
+                         select.appendChild(allOpt);
+                    } else if (select !== studentClassModalSelect && select !== courseGradeModalSelect) { 
+                        const defaultOpt = document.createElement('option');
+                        defaultOpt.value = "";
+                        defaultOpt.textContent = `اختر الصف`;
+                        select.appendChild(defaultOpt);
+                    }
+
+                    schoolGrades.forEach(grade => {
+                        const option = document.createElement('option');
+                        option.value = grade;
+                        option.textContent = grade;
+                        select.appendChild(option.cloneNode(true));
+                    });
+                }
+            });
+        }
+        
+        // --- Populate Tables & Initial Render ---
+        function populateStudentsTable() {
+            if (!studentsGroupedByClassDiv) return;
+            studentsGroupedByClassDiv.innerHTML = ''; 
+
+            schoolGrades.forEach(grade => {
+                const studentsInGrade = studentsData.filter(s => s.class === grade);
+                
+                const gradeSection = document.createElement('div');
+                gradeSection.classList.add('grade-section', 'mb-2'); 
+                
+                const titleDiv = document.createElement('div');
+                titleDiv.classList.add('grade-section-title', 'text-lg'); 
+                titleDiv.textContent = `طلاب الصف: ${grade} (${studentsInGrade.length})`;
+                const arrow = document.createElement('i');
+                arrow.classList.add('fas', 'fa-chevron-left', 'arrow-icon', 'mr-auto'); 
+                titleDiv.appendChild(arrow);
+                gradeSection.appendChild(titleDiv);
+
+                const tableContainer = document.createElement('div');
+                tableContainer.classList.add('grade-students-table', 'bg-white', 'shadow-md', 'rounded-lg', 'overflow-x-auto');
+                
+
+                const table = document.createElement('table');
+                table.classList.add('min-w-full', 'divide-y', 'divide-gray-200');
+                table.innerHTML = `
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الاسم</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الرقم الأكاديمي</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الحالة</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider action-column" data-roles="principal,teacher">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                    </tbody>`;
+                const tbody = table.querySelector('tbody');
+                if (studentsInGrade.length === 0) {
+                     tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">لا يوجد طلاب في هذا الصف.</td></tr>`;
+                } else {
+                    studentsInGrade.forEach(student => {
+                        const row = document.createElement('tr');
+                        row.dataset.id = student.id;
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${student.name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${student.id}</td>
+                            <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${student.status === 'نشط' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${student.status}</span></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium action-cell" data-roles="principal,teacher">
+                                <i class="fas fa-eye text-indigo-600 hover:text-indigo-900 ml-2 action-icon action-view" data-roles="principal,teacher" data-action="view" data-type="student" data-id="${student.id}" title="عرض"></i>
+                                <i class="fas fa-edit text-blue-600 hover:text-blue-900 ml-2 action-icon action-edit" data-roles="principal" data-action="edit" data-type="student" data-id="${student.id}" title="تعديل"></i>
+                                <i class="fas fa-trash text-red-600 hover:text-red-900 action-icon action-delete" data-roles="principal" data-action="delete" data-type="student" data-id="${student.id}" title="حذف"></i>
+                            </td>`;
+                        tbody.appendChild(row);
+                    });
+                }
+                tableContainer.appendChild(table);
+                gradeSection.appendChild(tableContainer);
+                studentsGroupedByClassDiv.appendChild(gradeSection);
+
+                titleDiv.addEventListener('click', () => {
+                    tableContainer.classList.toggle('expanded');
+                    arrow.classList.toggle('expanded');
+                });
+            });
+
+            if(totalStudentsCard) totalStudentsCard.textContent = studentsData.length;
+            updateRoleSpecificElementsInPage(studentsGroupedByClassDiv.closest('.page-content'));
+        }
+
+
+        function populateTeachersTable() {
+            const teachersTableBody = document.getElementById('teachersTableBody');
+            if (!teachersTableBody) return;
+            teachersTableBody.innerHTML = '';
+            
+            if (courseTeacherModalSelect) courseTeacherModalSelect.innerHTML = '<option value="">اختر معلمًا</option>';
+            
+            teachersData.forEach(teacher => {
+                const row = `<tr data-id="${teacher.id}">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${teacher.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${teacher.id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${teacher.subject}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium action-cell" data-roles="principal">
+                        <i class="fas fa-eye text-indigo-600 hover:text-indigo-900 ml-2 action-icon action-view" data-roles="principal" data-action="view" data-type="teacher" data-id="${teacher.id}" title="عرض"></i>
+                        <i class="fas fa-edit text-blue-600 hover:text-blue-900 ml-2 action-icon action-edit" data-roles="principal" data-action="edit" data-type="teacher" data-id="${teacher.id}" title="تعديل"></i>
+                        <i class="fas fa-trash text-red-600 hover:text-red-900 action-icon action-delete" data-roles="principal" data-action="delete" data-type="teacher" data-id="${teacher.id}" title="حذف"></i>
+                    </td>
+                </tr>`;
+                teachersTableBody.innerHTML += row;
+                if (courseTeacherModalSelect) { 
+                    const option = document.createElement('option');
+                    option.value = teacher.name; 
+                    option.textContent = teacher.name;
+                    courseTeacherModalSelect.appendChild(option);
+                }
+            });
+            if(totalTeachersCard) totalTeachersCard.textContent = teachersData.length;
+            updateRoleSpecificElementsInPage(teachersTableBody.closest('.page-content'));
+        }
+
+        function populateCoursesTable(filterGrade = 'all') {
+            const coursesTableBody = document.getElementById('coursesTableBody');
+            if (!coursesTableBody) return;
+            coursesTableBody.innerHTML = '';
+            const filteredCourses = filterGrade === 'all' ? coursesData : coursesData.filter(c => c.grade === filterGrade);
+
+            filteredCourses.forEach(course => {
+                const row = `<tr data-id="${course.id}">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${course.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${course.code}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${course.teacher}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${course.grade || 'غير محدد'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium action-cell" data-roles="principal">
+                        <i class="fas fa-eye text-indigo-600 hover:text-indigo-900 ml-2 action-icon action-view" data-roles="principal" data-action="view" data-type="course" data-id="${course.id}" title="عرض"></i>
+                        <i class="fas fa-edit text-blue-600 hover:text-blue-900 ml-2 action-icon action-edit" data-roles="principal" data-action="edit" data-type="course" data-id="${course.id}" title="تعديل"></i>
+                        <i class="fas fa-trash text-red-600 hover:text-red-900 action-icon action-delete" data-roles="principal" data-action="delete" data-type="course" data-id="${course.id}" title="حذف"></i>
+                    </td>
+                </tr>`;
+                coursesTableBody.innerHTML += row;
+            });
+            if(totalCoursesCard) totalCoursesCard.textContent = coursesData.length; 
+            updateRoleSpecificElementsInPage(coursesTableBody.closest('.page-content'));
+        }
+        if(courseGradeFilterSelect) {
+            courseGradeFilterSelect.addEventListener('change', (e) => populateCoursesTable(e.target.value));
+        }
+
+        function generateInitialData() {
+            // Students: 10 students per grade
+            schoolGrades.forEach(grade => {
+                for (let i = 0; i < 10; i++) {
+                     studentsData.push({
+                        id: `S${nextStudentIdNum++}`,
+                        name: sampleStudentNames[(schoolGrades.indexOf(grade) * 10 + i) % sampleStudentNames.length],
+                        class: grade,
+                        status: "نشط"
+                    });
+                }
+            });
+            
+            // Teachers
+            for (let i = 0; i < 10; i++) {
+                teachersData.push({ 
+                    id: `T${nextTeacherIdNum++}`, 
+                    name: sampleTeacherNames[i], 
+                    subject: teacherSubjects[i % teacherSubjects.length] 
+                });
+            }
+            // Courses - 6 per grade
+            const courseBaseNames = ["لغة عربية", "رياضيات", "علوم", "لغة انجليزية", "دراسات إسلامية", "تربية فنية", "حاسب آلي", "دراسات اجتماعية", "تربية بدنية"];
+            let courseCodeCounter = 101;
+            schoolGrades.forEach((grade, gradeIdx) => {
+                for (let i = 0; i < 6; i++) {
+                    const courseName = courseBaseNames[i % courseBaseNames.length]; 
+                    const teacherIndex = (gradeIdx * 6 + i) % teachersData.length;
+                    const uniqueCourseCode = `${courseName.substring(0,3).toUpperCase().replace(' ', '')}${courseCodeCounter++}`;
+                    coursesData.push({
+                        id: uniqueCourseCode, 
+                        code: uniqueCourseCode,
+                        name: `${courseName} - ${grade.split(' ')[0]}`,
+                        teacher: teachersData[teacherIndex].name,
+                        grade: grade
+                    });
+                }
+            });
+            // Sample Timetables
+            schoolGrades.forEach(grade => {
+                sampleTimetables[grade] = [];
+                const gradeCourses = coursesData.filter(c => c.grade === grade);
+                const times = ["08:00-08:45", "08:45-09:30", "09:30-10:15", "10:45-11:30", "11:30-12:15"];
+                times.forEach(time => {
+                    let slot = { time };
+                    ["sun", "mon", "tue", "wed", "thu"].forEach(day => {
+                        slot[day] = gradeCourses.length > 0 ? gradeCourses[Math.floor(Math.random() * gradeCourses.length)].name : "فراغ";
+                    });
+                    sampleTimetables[grade].push(slot);
+                });
+            });
+        }
+        
+        // --- Role-Based UI Update ---
+        function updateViewForRole() {
+            usernameDisplay.textContent = `اسم المستخدم (${roleSwitcher.options[roleSwitcher.selectedIndex].text})`;
+            
+            if (currentRole === 'student' && studentsData.length > 0) {
+                 const studentUser = studentsData.find(s => s.id === currentViewingStudentId);
+                 if(studentUser) {
+                    studentNameDashboard.textContent = studentUser.name; 
+                    usernameDisplayShort.textContent = studentUser.name.split(' ')[0]; // Show first name on mobile for student
+                 }
+            } else {
+                 studentNameDashboard.textContent = "";
+                 usernameDisplayShort.textContent = roleSwitcher.options[roleSwitcher.selectedIndex].text.split(' ')[0]; // Show role type for others
+            }
+
+            sidebarNav.querySelectorAll('.nav-link, .user-menu-item').forEach(link => {
+                const roles = link.dataset.roles.split(',');
+                link.classList.toggle('role-hidden', !roles.includes(currentRole));
+            });
+
+            document.querySelectorAll('.action-button, .action-column, .action-cell, .action-icon, .timetable-view, .student-view-only, .teacher-principal-view-only').forEach(el => {
+                 const roles = el.dataset.roles ? el.dataset.roles.split(',') : [];
+                 el.classList.toggle('role-hidden', !roles.includes(currentRole));
+            });
+            
+            [dashboardPrincipalView, dashboardTeacherView, dashboardStudentView, teacherTimetableView].forEach(view => view.classList.add('role-hidden'));
+            if (currentRole === 'principal') dashboardPrincipalView.classList.remove('role-hidden');
+            else if (currentRole === 'teacher') {
+                dashboardTeacherView.classList.remove('role-hidden');
+                if(teacherTimetableView) teacherTimetableView.classList.remove('role-hidden'); 
+            }
+            else if (currentRole === 'student') dashboardStudentView.classList.remove('role-hidden');
+
+            const currentActivePageId = document.querySelector('.page-content:not(.hidden)')?.id.replace('-content', '');
+            if (currentActivePageId) {
+                const currentLink = sidebarNav.querySelector(`.nav-link[data-target="${currentActivePageId}"]`);
+                if (currentLink && currentLink.classList.contains('role-hidden')) {
+                    navigateToSection('dashboard'); 
+                } else {
+                    const targetContent = document.getElementById(currentActivePageId + '-content');
+                    if(targetContent) updateRoleSpecificElementsInPage(targetContent);
+                     if (currentActivePageId === 'attendance') {
+                        if(currentRole === 'student') displayStudentAttendance(currentViewingStudentId, studentAttendanceDateViewInput.value);
+                        else populateAttendanceCourses(); 
+                     }
+                     if (currentActivePageId === 'grades') {
+                        if(currentRole === 'student') displayStudentGrades(currentViewingStudentId);
+                        else displayAllGradesForView(); 
+                     }
+                }
+            } else {
+                 navigateToSection('dashboard'); 
+            }
+        }
+
+        // --- Navigation Logic ---
+        function navigateToSection(targetId) {
+            const targetLink = sidebarNav.querySelector(`.nav-link[data-target="${targetId}"]`) || userMenu.querySelector(`.user-menu-item[data-target="${targetId}"]`);
+            
+            if (targetLink && targetLink.dataset.roles && !targetLink.dataset.roles.split(',').includes(currentRole)) {
+                pageContents.forEach(content => content.classList.add('hidden'));
+                document.getElementById('accessDenied-content').classList.remove('hidden');
+                pageTitle.textContent = "وصول مرفوض";
+                allNavLinks.forEach(navLink => navLink.classList.remove('active-link'));
+                const dashboardLink = sidebarNav.querySelector(`.nav-link[data-target="dashboard"]`);
+                if (dashboardLink) dashboardLink.classList.add('active-link');
+                return;
+            }
+
+            pageContents.forEach(content => content.classList.add('hidden'));
+            const targetContent = document.getElementById(targetId + '-content');
+
+            if (targetContent) {
+                targetContent.classList.remove('hidden');
+                if (targetLink) pageTitle.textContent = targetLink.textContent.trim();
+                else if (targetId === "profile") pageTitle.textContent = "الملف الشخصي";
+                else if (targetId === "logout") pageTitle.textContent = "تسجيل الخروج";
+                updateRoleSpecificElementsInPage(targetContent);
+
+                if (targetId === 'attendance') {
+                    if (currentRole === 'student') {
+                        displayStudentAttendance(currentViewingStudentId, studentAttendanceDateViewInput.value || new Date().toISOString().slice(0,10) );
+                    } else {
+                        populateAttendanceCourses(); 
+                    }
+                }
+                if (targetId === 'grades') {
+                    populateGradeEntryDropdowns(); 
+                    if (currentRole === 'student') {
+                        displayStudentGrades(currentViewingStudentId);
+                    } else {
+                        displayAllGradesForView(); 
+                    }
+                }
+
+
+            } else {
+                const dashboardContent = document.getElementById('dashboard-content');
+                if (dashboardContent) {
+                     dashboardContent.classList.remove('hidden');
+                     updateRoleSpecificElementsInPage(dashboardContent);
+                }
+                pageTitle.textContent = "لوحة التحكم";
+            }
+
+            allNavLinks.forEach(navLink => navLink.classList.remove('active-link'));
+            if (targetLink && targetLink.classList.contains('nav-link')) {
+                 targetLink.classList.add('active-link');
+            }
+
+            if (window.innerWidth < 768 && sidebar.classList.contains('sidebar-open')) {
+                sidebar.classList.add('sidebar-closed');
+                sidebar.classList.remove('sidebar-open');
+            }
+        }
+        
+        function updateRoleSpecificElementsInPage(pageElement) {
+            if (!pageElement) return;
+            pageElement.querySelectorAll('[data-roles]').forEach(el => {
+                const roles = el.dataset.roles.split(',');
+                el.classList.toggle('role-hidden', !roles.includes(currentRole));
+            });
+        }
+
+        // --- Modal Generic Functions ---
+        let activeModal = null;
+        function openModal(modalElement) { 
+            if(modalElement) { 
+                modalElement.classList.remove('hidden');
+                setTimeout(() => { 
+                    modalElement.classList.add('modal-active');
+                    modalElement.querySelector('.modal-content').style.opacity = 1;
+                    modalElement.querySelector('.modal-content').style.transform = 'translateY(0) scale(1)';
+                }, 10);
+                document.body.classList.add('overflow-hidden');
+                activeModal = modalElement;
+            }
+        }
+        function closeModal(modalElement) { 
+            if(modalElement) { 
+                modalElement.querySelector('.modal-content').style.opacity = 0;
+                modalElement.querySelector('.modal-content').style.transform = 'translateY(-20px) scale(0.95)';
+                setTimeout(() => {
+                    modalElement.classList.add('hidden');
+                    modalElement.classList.remove('modal-active');
+                } , 300) ; 
+                document.body.classList.remove('overflow-hidden');
+                activeModal = null;
+             }
+        }
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && activeModal) {
+                closeModal(activeModal);
+            }
+        });
+
+
+        // --- Event Listeners ---
+        sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('sidebar-closed') || sidebar.classList.toggle('sidebar-open'));
+        document.addEventListener('click', (event) => {
+            if (!sidebar.contains(event.target) && !sidebarToggle.contains(event.target) && window.innerWidth < 768 && sidebar.classList.contains('sidebar-open')) {
+                sidebar.classList.add('sidebar-closed'); sidebar.classList.remove('sidebar-open');
+            }
+            if (userMenu && !userMenuButton.contains(event.target) && !userMenu.contains(event.target)) userMenu.classList.add('hidden');
+        });
+        allNavLinks.forEach(link => link.addEventListener('click', (e) => { e.preventDefault(); navigateToSection(link.dataset.target); }));
+        userMenuButton.addEventListener('click', () => userMenu.classList.toggle('hidden'));
+        userMenuItems.forEach(item => item.addEventListener('click', (e) => { e.preventDefault(); navigateToSection(item.dataset.target); userMenu.classList.add('hidden'); }));
+        roleSwitcher.addEventListener('change', (e) => { 
+            currentRole = e.target.value; 
+            if (currentRole === 'student') {
+                currentViewingStudentId = "S1001"; 
+                const selectedOption = roleSwitcher.options[roleSwitcher.selectedIndex];
+                const studentForDisplay = studentsData.find(s => s.id === currentViewingStudentId);
+                if (studentForDisplay) {
+                    selectedOption.textContent = `طالب (${studentForDisplay.name} - ${currentViewingStudentId})`;
+                } else {
+                    selectedOption.textContent = `طالب (مثال: ${currentViewingStudentId})`;
+                }
+            } else {
+                const studentOption = Array.from(roleSwitcher.options).find(opt => opt.value === 'student');
+                if (studentOption) studentOption.textContent = `طالب (مثال: S1001)`;
+            }
+            updateViewForRole(); 
+        });
+
+
+        if(document.getElementById('navigateToStudents')) document.getElementById('navigateToStudents').addEventListener('click', () => navigateToSection('students'));
+        if(document.getElementById('navigateToTeachers')) document.getElementById('navigateToTeachers').addEventListener('click', () => navigateToSection('teachers'));
+        if(document.getElementById('navigateToCourses')) document.getElementById('navigateToCourses').addEventListener('click', () => navigateToSection('courses'));
+
+        // --- Student Modal Logic ---
+        if(addStudentBtn) addStudentBtn.addEventListener('click', () => {
+            studentForm.reset();
+            studentEditIdInput.value = '';
+            studentIdModalInput.value = `S${nextStudentIdNum}`; 
+            studentIdModalInput.disabled = false;
+            studentModalTitle.textContent = 'إضافة طالب جديد';
+            submitStudentFormButton.textContent = 'إضافة طالب';
+            openModal(studentFormModal);
+        });
+        if(closeStudentFormModal) closeStudentFormModal.addEventListener('click', () => closeModal(studentFormModal));
+        if(cancelStudentForm) cancelStudentForm.addEventListener('click', () => closeModal(studentFormModal));
+        if(studentFormModal) studentFormModal.addEventListener('click', (e) => { if (e.target === studentFormModal) closeModal(studentFormModal); });
+        
+        if(studentForm) studentForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const studentId = studentIdModalInput.value; 
+            const editingId = studentEditIdInput.value; 
+
+            const studentPayload = {
+                name: studentNameModalInput.value,
+                class: studentClassModalSelect.value,
+                status: studentStatusModalSelect.value,
+                id: studentId 
+            };
+
+            if (editingId) { 
+                const index = studentsData.findIndex(s => s.id === editingId); 
+                if (index !== -1) {
+                    studentsData[index] = { ...studentsData[index], ...studentPayload, id: studentsData[index].id }; 
+                }
+            } else { 
+                if (studentsData.some(s => s.id === studentId)) {
+                    alert("الرقم الأكاديمي موجود بالفعل. يرجى إدخال رقم فريد.");
+                    return;
+                }
+                studentsData.push(studentPayload);
+                nextStudentIdNum++; 
+            }
+            populateStudentsTable();
+            populateGradeEntryDropdowns(); 
+            closeModal(studentFormModal);
+        });
+
+        if(closeViewStudentModal) closeViewStudentModal.addEventListener('click', () => closeModal(viewStudentModal));
+        if(okViewStudentModal) okViewStudentModal.addEventListener('click', () => closeModal(viewStudentModal));
+        if(viewStudentModal) viewStudentModal.addEventListener('click', (e) => { if (e.target === viewStudentModal) closeModal(viewStudentModal); });
+
+        // --- Teacher Modal Logic ---
+        if(addTeacherBtn) addTeacherBtn.addEventListener('click', () => {
+            teacherForm.reset();
+            teacherEditIdInput.value = '';
+            teacherIdModalInput.value = `T${nextTeacherIdNum}`;
+            teacherIdModalInput.disabled = false;
+            teacherModalTitle.textContent = 'إضافة معلم جديد';
+            submitTeacherFormButton.textContent = 'إضافة معلم';
+            openModal(teacherFormModal);
+        });
+        if(closeTeacherFormModal) closeTeacherFormModal.addEventListener('click', () => closeModal(teacherFormModal));
+        if(cancelTeacherForm) cancelTeacherForm.addEventListener('click', () => closeModal(teacherFormModal));
+        if(teacherFormModal) teacherFormModal.addEventListener('click', (e) => { if (e.target === teacherFormModal) closeModal(teacherFormModal); });
+
+        if(teacherForm) teacherForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const teacherId = teacherIdModalInput.value; 
+            const editingId = teacherEditIdInput.value;
+
+            const teacherPayload = {
+                name: teacherNameModalInput.value,
+                subject: teacherSubjectModalInput.value,
+                id: teacherId 
+            };
+
+            if (editingId) {
+                const index = teachersData.findIndex(t => t.id === editingId);
+                if (index !== -1) teachersData[index] = { ...teachersData[index], ...teacherPayload, id: teachersData[index].id };
+            } else {
+                 if (teachersData.some(t => t.id === teacherId)) {
+                    alert("الرقم الوظيفي موجود بالفعل. يرجى إدخال رقم فريد.");
+                    return;
+                }
+                teachersData.push(teacherPayload);
+                nextTeacherIdNum++;
+            }
+            populateTeachersTable();
+            populateCoursesTable(courseGradeFilterSelect.value); 
+            closeModal(teacherFormModal);
+        });
+        if(closeViewTeacherModal) closeViewTeacherModal.addEventListener('click', () => closeModal(viewTeacherModal));
+        if(okViewTeacherModal) okViewTeacherModal.addEventListener('click', () => closeModal(viewTeacherModal));
+        if(viewTeacherModal) viewTeacherModal.addEventListener('click', (e) => { if (e.target === viewTeacherModal) closeModal(viewTeacherModal); });
+
+
+        // --- Course Modal Logic ---
+        if(addCourseBtn) addCourseBtn.addEventListener('click', () => {
+            courseForm.reset();
+            courseEditIdInput.value = '';
+            courseCodeModalInput.value = `C${nextCourseCodeNum}`; 
+            courseCodeModalInput.disabled = false;
+            courseModalTitle.textContent = 'إضافة مادة جديدة';
+            submitCourseFormButton.textContent = 'إضافة مادة';
+            openModal(courseFormModal);
+        });
+        if(closeCourseFormModal) closeCourseFormModal.addEventListener('click', () => closeModal(courseFormModal));
+        if(cancelCourseForm) cancelCourseForm.addEventListener('click', () => closeModal(courseFormModal));
+        if(courseFormModal) courseFormModal.addEventListener('click', (e) => { if (e.target === courseFormModal) closeModal(courseFormModal); });
+
+        if(courseForm) courseForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const courseCode = courseCodeModalInput.value; 
+            const editingId = courseEditIdInput.value; 
+
+            const coursePayload = {
+                name: courseNameModalInput.value,
+                teacher: courseTeacherModalSelect.value,
+                grade: courseGradeModalSelect.value,
+                code: courseCode, 
+                id: editingId ? editingId : courseCode 
+            };
+            
+            if (editingId) {
+                const index = coursesData.findIndex(c => c.id === editingId);
+                if (index !== -1) coursesData[index] = { ...coursesData[index], ...coursePayload, id: coursesData[index].id, code: coursesData[index].code };
+            } else {
+                if (coursesData.some(c => c.code === courseCode)) {
+                     alert("رمز المادة موجود بالفعل. يرجى إدخال رمز فريد.");
+                    return;
+                }
+                coursePayload.id = courseCode; 
+                coursesData.push(coursePayload);
+                nextCourseCodeNum++;
+            }
+            populateCoursesTable(courseGradeFilterSelect.value);
+            populateAttendanceCourses(); 
+            populateGradeEntryDropdowns(); 
+            closeModal(courseFormModal);
+        });
+        if(closeViewCourseModal) closeViewCourseModal.addEventListener('click', () => closeModal(viewCourseModal));
+        if(okViewCourseModal) okViewCourseModal.addEventListener('click', () => closeModal(viewCourseModal));
+        if(viewCourseModal) viewCourseModal.addEventListener('click', (e) => { if (e.target === viewCourseModal) closeModal(viewCourseModal); });
+
+
+        // --- Confirm Delete Modal Logic ---
+        if(cancelDelete) cancelDelete.addEventListener('click', () => closeModal(confirmDeleteModal));
+        if(confirmDeleteModal) confirmDeleteModal.addEventListener('click', (e) => { if (e.target === confirmDeleteModal) closeModal(confirmDeleteModal); });
+        if(confirmDeleteButton) confirmDeleteButton.addEventListener('click', () => {
+            if (itemToDelete.type === 'student') {
+                studentsData = studentsData.filter(s => s.id !== itemToDelete.id);
+                populateStudentsTable();
+                populateGradeEntryDropdowns();
+            } else if (itemToDelete.type === 'teacher') {
+                teachersData = teachersData.filter(t => t.id !== itemToDelete.id);
+                populateTeachersTable();
+                populateCoursesTable(courseGradeFilterSelect.value); 
+            } else if (itemToDelete.type === 'course') {
+                coursesData = coursesData.filter(c => c.id !== itemToDelete.id);
+                populateCoursesTable(courseGradeFilterSelect.value);
+                populateAttendanceCourses();
+                populateGradeEntryDropdowns();
+            }
+            closeModal(confirmDeleteModal);
+            itemToDelete = { type: null, id: null }; 
+        });
+
+        // --- Table Action Event Delegation ---
+        document.getElementById('mainContent').addEventListener('click', function(event) {
+            const target = event.target.closest('.action-icon');
+            if (!target) return;
+
+            const action = target.dataset.action;
+            const type = target.dataset.type;
+            const id = target.dataset.id; 
+
+            if (type === 'student') {
+                const student = studentsData.find(s => s.id === id);
+                if (!student) return;
+                if (action === 'view') {
+                    viewStudentDetailsDiv.innerHTML = `<p class="mb-2"><strong class="ml-2">الاسم:</strong> ${student.name}</p><p class="mb-2"><strong class="ml-2">الرقم الأكاديمي:</strong> ${student.id}</p><p class="mb-2"><strong class="ml-2">الصف:</strong> ${student.class}</p><p><strong class="ml-2">الحالة:</strong> ${student.status}</p>`;
+                    openModal(viewStudentModal);
+                } else if (action === 'edit') {
+                    studentForm.reset();
+                    studentEditIdInput.value = student.id; 
+                    studentNameModalInput.value = student.name;
+                    studentIdModalInput.value = student.id; 
+                    studentIdModalInput.disabled = true; 
+                    studentClassModalSelect.value = student.class;
+                    studentStatusModalSelect.value = student.status;
+                    studentModalTitle.textContent = 'تعديل بيانات الطالب';
+                    submitStudentFormButton.textContent = 'حفظ التعديلات';
+                    openModal(studentFormModal);
+                } else if (action === 'delete') {
+                    itemToDelete = { type: 'student', id: id };
+                    confirmDeleteMessage.textContent = `هل أنت متأكد أنك تريد حذف الطالب "${student.name}"؟`;
+                    openModal(confirmDeleteModal);
+                }
+            } else if (type === 'teacher') {
+                const teacher = teachersData.find(t => t.id === id);
+                if (!teacher) return;
+                if (action === 'view') {
+                    viewTeacherDetailsDiv.innerHTML = `<p class="mb-2"><strong class="ml-2">الاسم:</strong> ${teacher.name}</p><p class="mb-2"><strong class="ml-2">الرقم الوظيفي:</strong> ${teacher.id}</p><p><strong class="ml-2">المادة الأساسية:</strong> ${teacher.subject}</p>`;
+                    openModal(viewTeacherModal);
+                } else if (action === 'edit') {
+                    teacherForm.reset();
+                    teacherEditIdInput.value = teacher.id; 
+                    teacherNameModalInput.value = teacher.name;
+                    teacherIdModalInput.value = teacher.id; 
+                    teacherIdModalInput.disabled = true; 
+                    teacherSubjectModalInput.value = teacher.subject;
+                    teacherModalTitle.textContent = 'تعديل بيانات المعلم';
+                    submitTeacherFormButton.textContent = 'حفظ التعديلات';
+                    openModal(teacherFormModal);
+                } else if (action === 'delete') {
+                    itemToDelete = { type: 'teacher', id: id };
+                    confirmDeleteMessage.textContent = `هل أنت متأكد أنك تريد حذف المعلم "${teacher.name}"؟`;
+                    openModal(confirmDeleteModal);
+                }
+            } else if (type === 'course') {
+                const course = coursesData.find(c => c.id === id); 
+                if(!course) return;
+                if (action === 'view') {
+                    viewCourseDetailsDiv.innerHTML = `<p class="mb-2"><strong class="ml-2">اسم المادة:</strong> ${course.name}</p><p class="mb-2"><strong class="ml-2">رمز المادة:</strong> ${course.code}</p><p class="mb-2"><strong class="ml-2">المعلم:</strong> ${course.teacher}</p><p><strong class="ml-2">الصف:</strong> ${course.grade}</p>`;
+                    openModal(viewCourseModal);
+                } else if (action === 'edit') {
+                    courseForm.reset();
+                    courseEditIdInput.value = course.id; 
+                    courseNameModalInput.value = course.name;
+                    courseCodeModalInput.value = course.code; 
+                    courseCodeModalInput.disabled = true; 
+                    courseTeacherModalSelect.value = course.teacher;
+                    courseGradeModalSelect.value = course.grade;
+                    courseModalTitle.textContent = 'تعديل بيانات المادة';
+                    submitCourseFormButton.textContent = 'حفظ التعديلات';
+                    openModal(courseFormModal);
+                } else if (action === 'delete') {
+                    itemToDelete = { type: 'course', id: id };
+                    confirmDeleteMessage.textContent = `هل أنت متأكد أنك تريد حذف مادة "${course.name}"؟`;
+                    openModal(confirmDeleteModal);
+                }
+            } else if (type === 'grade') { 
+                 const gradeRecord = gradesData.find(g => g.recordId.toString() === id);
+                 if (!gradeRecord) return;
+                 if (action === 'edit') {
+                    gradeEditRecordIdInput.value = gradeRecord.recordId;
+                    gradeStudentSelect.value = gradeRecord.studentId;
+                    gradeCourseSelect.value = gradeRecord.courseId;
+                    gradeAssignmentInput.value = gradeRecord.assignmentName;
+                    gradeValueInput.value = gradeRecord.gradeValue;
+                    saveGradeBtn.textContent = "تحديث الدرجة";
+                    addGradeSection.scrollIntoView({behavior: "smooth"});
+                 } else if (action === 'delete') {
+                    gradesData = gradesData.filter(g => g.recordId.toString() !== id);
+                    displayAllGradesForView(); 
+                 }
+            }
+        });
+
+        // --- Timetable Logic ---
+        if(timetableGradeSelector) {
+            timetableGradeSelector.addEventListener('change', function() {
+                const selectedGrade = this.value;
+                timetableDisplayDiv.innerHTML = ''; 
+                if (sampleTimetables[selectedGrade] && sampleTimetables[selectedGrade].length > 0) {
+                    const table = document.createElement('table');
+                    table.classList.add('min-w-full', 'timetable');
+                    let tableHTML = `<thead><tr><th>الوقت/اليوم</th><th>الأحد</th><th>الاثنين</th><th>الثلاثاء</th><th>الأربعاء</th><th>الخميس</th></tr></thead><tbody>`;
+                    sampleTimetables[selectedGrade].forEach(slot => {
+                        tableHTML += `<tr><td>${slot.time}</td><td>${slot.sun || ''}</td><td>${slot.mon || ''}</td><td>${slot.tue || ''}</td><td>${slot.wed || ''}</td><td>${slot.thu || ''}</td></tr>`;
+                    });
+                    tableHTML += `</tbody>`;
+                    table.innerHTML = tableHTML;
+                    timetableDisplayDiv.appendChild(table);
+                } else if (selectedGrade !== "") {
+                    timetableDisplayDiv.innerHTML = `<p class="text-gray-500">لا يوجد جدول دراسي متاح لهذا الصف حاليًا أو لم يتم إضافة مواد كافية.</p>`;
+                } else {
+                     timetableDisplayDiv.innerHTML = `<p class="text-gray-500">يرجى اختيار صف لعرض جدوله.</p>`;
+                }
+            });
+        }
+
+        // --- Attendance Logic ---
+        if(attendanceDateInput) attendanceDateInput.valueAsDate = new Date(); 
+
+        function populateAttendanceCourses() {
+            if(!attendanceCourseSelect || !attendanceGradeSelect) return;
+            const selectedGrade = attendanceGradeSelect.value;
+            attendanceCourseSelect.innerHTML = '<option value="">اختر المادة/الحصة</option>';
+            coursesData.filter(c => c.grade === selectedGrade).forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.id; 
+                option.textContent = `${course.name} (${course.teacher})`;
+                attendanceCourseSelect.appendChild(option);
+            });
+        }
+        if(attendanceGradeSelect) attendanceGradeSelect.addEventListener('change', () => {
+            populateAttendanceCourses();
+            attendanceSheetDiv.classList.add('hidden'); 
+            attendanceStudentListDiv.innerHTML = '';
+        });
+         if(attendanceCourseSelect) attendanceCourseSelect.addEventListener('change', () => {
+            attendanceSheetDiv.classList.add('hidden'); 
+            attendanceStudentListDiv.innerHTML = '';
+        });
+
+
+        if(loadAttendanceSheetBtn) loadAttendanceSheetBtn.addEventListener('click', () => {
+            const selectedGrade = attendanceGradeSelect.value;
+            const selectedCourseId = attendanceCourseSelect.value; 
+            const selectedDate = attendanceDateInput.value;
+
+            if (!selectedGrade || !selectedCourseId || !selectedDate) {
+                attendanceMessage.textContent = "يرجى اختيار التاريخ والصف والمادة أولاً.";
+                attendanceMessage.className = 'message-banner message-error';
+                attendanceMessage.classList.remove('hidden');
+                attendanceSheetDiv.classList.add('hidden');
+                return;
+            }
+            attendanceMessage.textContent = "";
+            attendanceMessage.classList.add('hidden');
+
+
+            const studentsInSelectedGrade = studentsData.filter(s => s.class === selectedGrade && s.status === 'نشط');
+            attendanceStudentListDiv.innerHTML = '';
+            if (studentsInSelectedGrade.length === 0) {
+                attendanceStudentListDiv.innerHTML = '<p>لا يوجد طلاب نشطون في هذا الصف.</p>';
+                attendanceSheetDiv.classList.remove('hidden');
+                return;
+            }
+
+            studentsInSelectedGrade.forEach(student => {
+                const existingRecord = attendanceData.find(r => r.studentId === student.id && r.date === selectedDate && r.courseId === selectedCourseId);
+                const currentStatus = existingRecord ? existingRecord.status : 'present'; 
+
+                const div = document.createElement('div');
+                // Responsive attendance item: stack on small screens
+                div.classList.add('flex', 'flex-col', 'sm:flex-row', 'sm:justify-between', 'sm:items-center', 'p-2', 'border-b', 'hover:bg-gray-50');
+                div.innerHTML = `
+                    <span class="mb-1 sm:mb-0">${student.name} (${student.id})</span>
+                    <div class="space-x-2 space-x-reverse self-start sm:self-center">
+                        <label class="ml-2 cursor-pointer"><input type="radio" name="attendance-${student.id}" value="present" data-student-id="${student.id}" ${currentStatus === 'present' ? 'checked' : ''} class="form-radio text-green-500"> حاضر</label>
+                        <label class="ml-2 cursor-pointer"><input type="radio" name="attendance-${student.id}" value="absent" data-student-id="${student.id}" ${currentStatus === 'absent' ? 'checked' : ''} class="form-radio text-red-500"> غائب</label>
+                        <label class="cursor-pointer"><input type="radio" name="attendance-${student.id}" value="late" data-student-id="${student.id}" ${currentStatus === 'late' ? 'checked' : ''} class="form-radio text-yellow-500"> متأخر</label>
+                    </div>`;
+                attendanceStudentListDiv.appendChild(div);
+            });
+            attendanceSheetDiv.classList.remove('hidden');
+        });
+
+        if(saveAttendanceBtn) saveAttendanceBtn.addEventListener('click', () => {
+            const selectedCourseId = attendanceCourseSelect.value;
+            const selectedDate = attendanceDateInput.value;
+            let updatedRecords = 0;
+            attendanceStudentListDiv.querySelectorAll('input[type="radio"]:checked').forEach(radio => {
+                const studentId = radio.dataset.studentId;
+                const status = radio.value;
+                
+                const recordIndex = attendanceData.findIndex(
+                    record => record.studentId === studentId && record.date === selectedDate && record.courseId === selectedCourseId
+                );
+
+                if (recordIndex > -1) { 
+                    attendanceData[recordIndex].status = status;
+                } else { 
+                    attendanceData.push({ recordId: `ATT${nextAttendanceRecordId++}`, date: selectedDate, studentId: studentId, courseId: selectedCourseId, status: status });
+                }
+                updatedRecords++;
+            });
+            console.log("Updated Attendance Data:", attendanceData); 
+            attendanceMessage.textContent = `تم تحديث/حفظ ${updatedRecords} سجل حضور بنجاح!`;
+            attendanceMessage.className = 'message-banner message-success';
+            attendanceMessage.classList.remove('hidden');
+            if (currentRole === 'student') displayStudentAttendance(currentViewingStudentId, studentAttendanceDateViewInput.value); 
+        });
+
+        function displayStudentAttendance(studentId, date) {
+            if (!studentAttendanceDisplayDiv || !studentId || !date) return;
+            const studentRecords = attendanceData.filter(r => r.studentId === studentId && r.date === date);
+            studentAttendanceDisplayDiv.innerHTML = '';
+            if (studentRecords.length === 0) {
+                studentAttendanceDisplayDiv.innerHTML = `<p class="text-gray-600">لا يوجد سجل حضور لهذا التاريخ.</p>`;
+                return;
+            }
+            const list = document.createElement('ul');
+            list.classList.add('list-disc', 'pl-5', 'space-y-1');
+            studentRecords.forEach(record => {
+                const course = coursesData.find(c => c.id === record.courseId);
+                const courseName = course ? course.name : record.courseId;
+                let statusText = record.status === 'present' ? 'حاضر' : (record.status === 'absent' ? 'غائب' : 'متأخر');
+                let statusColor = record.status === 'present' ? 'text-green-600' : (record.status === 'absent' ? 'text-red-600' : 'text-yellow-600');
+                const item = document.createElement('li');
+                item.innerHTML = `مادة <strong>${courseName}</strong>: <span class="${statusColor} font-semibold">${statusText}</span>`;
+                list.appendChild(item);
+            });
+            studentAttendanceDisplayDiv.appendChild(list);
+        }
+        if(studentAttendanceDateViewInput) {
+            studentAttendanceDateViewInput.valueAsDate = new Date();
+            studentAttendanceDateViewInput.addEventListener('change', (e) => {
+                if (currentRole === 'student') displayStudentAttendance(currentViewingStudentId, e.target.value);
+            });
+        }
+
+
+        // --- Grades Logic ---
+        function populateGradeEntryDropdowns() {
+            if(gradeStudentSelect) {
+                gradeStudentSelect.innerHTML = '<option value="">اختر طالبًا</option>';
+                studentsData.filter(s => s.status === 'نشط').forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id; opt.textContent = `${s.name} (${s.class})`;
+                    gradeStudentSelect.appendChild(opt);
+                });
+            }
+            if(gradeCourseSelect) {
+                gradeCourseSelect.innerHTML = '<option value="">اختر مادة</option>';
+                coursesData.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id; opt.textContent = `${c.name} (${c.grade})`;
+                    gradeCourseSelect.appendChild(opt);
+                });
+            }
+        }
+
+        if(saveGradeBtn) saveGradeBtn.addEventListener('click', () => {
+            const studentId = gradeStudentSelect.value;
+            const courseId = gradeCourseSelect.value;
+            const assignmentName = gradeAssignmentInput.value.trim();
+            const gradeValue = gradeValueInput.value;
+            const editingRecordId = gradeEditRecordIdInput.value;
+
+
+            if (!studentId || !courseId || !assignmentName || gradeValue === "") {
+                gradeMessage.textContent = "يرجى ملء جميع الحقول لإدخال الدرجة.";
+                gradeMessage.className = 'message-banner message-error';
+                gradeMessage.classList.remove('hidden');
+                return;
+            }
+
+            if (editingRecordId) { 
+                const recordIndex = gradesData.findIndex(g => g.recordId.toString() === editingRecordId);
+                if (recordIndex > -1) {
+                    gradesData[recordIndex] = { ...gradesData[recordIndex], studentId, courseId, assignmentName, gradeValue: parseFloat(gradeValue) };
+                }
+            } else { 
+                 gradesData.push({ recordId: `GRD${nextGradeRecordId++}`, studentId, courseId, assignmentName, gradeValue: parseFloat(gradeValue) });
+            }
+            
+            console.log("Grades Data:", gradesData); 
+            gradeMessage.textContent = `تم ${editingRecordId ? 'تحديث' : 'حفظ'} الدرجة بنجاح!`;
+            gradeMessage.className = 'message-banner message-success';
+            gradeMessage.classList.remove('hidden');
+            
+            gradeForm.reset(); 
+            gradeEditRecordIdInput.value = ''; 
+            saveGradeBtn.textContent = "حفظ الدرجة";
+
+
+            displayAllGradesForView(); 
+            if (currentRole === 'student') displayStudentGrades(currentViewingStudentId); 
+        });
+
+        if(clearGradeFormBtn) clearGradeFormBtn.addEventListener('click', () => {
+            gradeForm.reset();
+            gradeEditRecordIdInput.value = '';
+            saveGradeBtn.textContent = "حفظ الدرجة";
+            gradeMessage.textContent = "";
+            gradeMessage.classList.add('hidden');
+        });
+
+        function displayAllGradesForView() {
+            if (!gradesDisplayArea) return;
+            gradesDisplayArea.innerHTML = '';
+            if (gradesData.length === 0) {
+                gradesDisplayArea.innerHTML = '<p class="text-gray-500">لا توجد درجات مسجلة حاليًا.</p>';
+                return;
+            }
+
+            const table = document.createElement('table');
+            table.classList.add('min-w-full', 'divide-y', 'divide-gray-200', 'text-sm');
+            table.innerHTML = `
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-right font-medium text-gray-500 uppercase">الطالب</th>
+                        <th class="px-4 py-2 text-right font-medium text-gray-500 uppercase">المادة</th>
+                        <th class="px-4 py-2 text-right font-medium text-gray-500 uppercase">الواجب/الاختبار</th>
+                        <th class="px-4 py-2 text-right font-medium text-gray-500 uppercase">الدرجة</th>
+                        <th class="px-4 py-2 text-center font-medium text-gray-500 uppercase action-column" data-roles="principal,teacher">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200"></tbody>`;
+            const tbody = table.querySelector('tbody');
+            gradesData.forEach(record => {
+                const student = studentsData.find(s => s.id === record.studentId);
+                const course = coursesData.find(c => c.id === record.courseId);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 py-2 whitespace-nowrap">${student ? student.name : record.studentId}</td>
+                    <td class="px-4 py-2 whitespace-nowrap">${course ? course.name : record.courseId}</td>
+                    <td class="px-4 py-2 whitespace-nowrap">${record.assignmentName}</td>
+                    <td class="px-4 py-2 whitespace-nowrap">${record.gradeValue}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-center action-cell" data-roles="principal,teacher">
+                        <i class="fas fa-edit text-blue-600 hover:text-blue-900 ml-2 action-icon action-edit" data-roles="principal,teacher" data-action="edit" data-type="grade" data-id="${record.recordId}" title="تعديل الدرجة"></i>
+                        <i class="fas fa-trash text-red-600 hover:text-red-900 action-icon action-delete" data-roles="principal,teacher" data-action="delete" data-type="grade" data-id="${record.recordId}" title="حذف الدرجة"></i>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            gradesDisplayArea.appendChild(table);
+            updateRoleSpecificElementsInPage(gradesDisplayArea.closest('.page-content')); 
+        }
+        
+        function displayStudentGrades(studentId) {
+            if (!gradesDisplayArea || !studentId) return;
+            const studentGrades = gradesData.filter(g => g.studentId === studentId);
+            gradesDisplayArea.innerHTML = '';
+
+            if (studentGrades.length === 0) {
+                gradesDisplayArea.innerHTML = '<p class="text-gray-600">لا توجد درجات مسجلة لك حاليًا.</p>';
+                return;
+            }
+            const coursesWithGrades = {}; 
+            studentGrades.forEach(record => {
+                if (!coursesWithGrades[record.courseId]) {
+                    coursesWithGrades[record.courseId] = [];
+                }
+                coursesWithGrades[record.courseId].push(record);
+            });
+
+            for (const courseId in coursesWithGrades) {
+                const course = coursesData.find(c => c.id === courseId);
+                const courseName = course ? course.name : courseId;
+                const courseDiv = document.createElement('div');
+                courseDiv.classList.add('mb-3', 'p-3', 'border', 'rounded-md', 'bg-white', 'shadow');
+                courseDiv.innerHTML = `<h4 class="text-md font-semibold text-blue-700 mb-1">مادة: ${courseName}</h4>`;
+                const ul = document.createElement('ul');
+                ul.classList.add('list-disc', 'pl-5', 'text-sm', 'space-y-0.5');
+                coursesWithGrades[courseId].forEach(record => {
+                    const li = document.createElement('li');
+                    li.textContent = `${record.assignmentName}: ${record.gradeValue}`;
+                    ul.appendChild(li);
+                });
+                courseDiv.appendChild(ul);
+                gradesDisplayArea.appendChild(courseDiv);
+            }
+        }
+        
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            populateGradeSelects(); 
+            generateInitialData();
+            populateStudentsTable();
+            populateTeachersTable();
+            populateCoursesTable();
+            populateGradeEntryDropdowns(); 
+            if(attendanceGradeSelect) populateAttendanceCourses(); 
+
+            updateViewForRole(); 
+            const initialTarget = window.location.hash ? window.location.hash.substring(1) : 'dashboard';
+            const initialLink = sidebarNav.querySelector(`.nav-link[data-target="${initialTarget}"]`);
+            if (initialLink && initialLink.dataset.roles && initialLink.dataset.roles.split(',').includes(currentRole)) {
+                 navigateToSection(initialTarget);
+            } else {
+                navigateToSection('dashboard');
+            }
+        });
+
+    </script>
+</body>
+</html>
